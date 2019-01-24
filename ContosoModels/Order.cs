@@ -77,7 +77,7 @@ namespace Contoso.Models
         /// <summary>
         /// Gets or sets the items in the order.
         /// </summary>
-        public virtual List<LineItem> LineItems { get; set; } = new List<LineItem>();
+        public List<LineItem> LineItems { get; set; } = new List<LineItem>();
 
         /// <summary>
         /// Gets or sets when the order was placed.
@@ -107,7 +107,7 @@ namespace Contoso.Models
         /// <summary>
         /// Gets the order's subtotal.
         /// </summary>
-        public decimal Subtotal => LineItems.Sum(x => x.Product.ListPrice * x.Quantity);
+        public decimal Subtotal => LineItems.Sum(lineItem => lineItem.Product.ListPrice * lineItem.Quantity);
 
         /// <summary>
         /// Gets the order's tax.
@@ -122,7 +122,7 @@ namespace Contoso.Models
         /// <summary>
         /// Returns the invoice number.
         /// </summary>
-        public override string ToString() => $"{InvoiceNumber}";
+        public override string ToString() => InvoiceNumber.ToString();
     }
 
     /// <summary>

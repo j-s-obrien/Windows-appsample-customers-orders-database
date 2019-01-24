@@ -22,18 +22,41 @@
 //  THE SOFTWARE.
 //  ---------------------------------------------------------------------------------
 
-using System;
+using Windows.UI.Xaml;
 
-namespace Contoso.App.Diagnostics.Models
+namespace Contoso.App.ViewModels
 {
     /// <summary>
-    /// Contains diagnostic data about app launch.
+    /// Provides static methods for use in x:Bind function binding to convert bound values to the required value.
     /// </summary>
-    public class Launch : Diagnostic
+    public static class Converters
     {
         /// <summary>
-        /// Gets or sets the time it took to run in-app loading code.
+        /// Returns the reverse of the provided value.
         /// </summary>
-        public TimeSpan LoadTime { get; set; }
+        public static bool Not(bool value) => !value;
+
+        /// <summary>
+        /// Returns true if the specified value is not null; otherwise, returns false.
+        /// </summary>
+        public static bool IsNotNull(object value) => value != null;
+
+        /// <summary>
+        /// Returns Visibility.Collapsed if the specified value is true; otherwise, returns Visibility.Visible.
+        /// </summary>
+        public static Visibility CollapsedIf(bool value) =>
+            value ? Visibility.Collapsed : Visibility.Visible;
+
+        /// <summary>
+        /// Returns Visibility.Collapsed if the specified value is null; otherwise, returns Visibility.Visible.
+        /// </summary>
+        public static Visibility CollapsedIfNull(object value) =>
+            value == null ? Visibility.Collapsed : Visibility.Visible;
+
+        /// <summary>
+        /// Returns Visibility.Collapsed if the specified string is null or empty; otherwise, returns Visibility.Visible.
+        /// </summary>
+        public static Visibility CollapsedIfNullOrEmpty(string value) =>
+            string.IsNullOrEmpty(value) ? Visibility.Collapsed : Visibility.Visible;
     }
 }

@@ -22,8 +22,6 @@
 //  THE SOFTWARE.
 //  ---------------------------------------------------------------------------------
 
-using Newtonsoft.Json;
-using System.Collections.Generic;
 using System;
 
 namespace Contoso.Models
@@ -64,27 +62,16 @@ namespace Contoso.Models
         public string Address { get; set; }
 
         /// <summary>
-        /// A list of the customer's orders. 
-        /// </summary>
-        [JsonIgnore]
-        public virtual List<Order> Orders { get; set; }
-
-        /// <summary>
         /// Returns the customer's name.
         /// </summary>
         public override string ToString() => $"{FirstName} {LastName}";
 
-        public bool Equals(Customer other)
-        {
-            return 
-                this.FirstName == other.FirstName &&
-                this.LastName == other.LastName &&
-                this.Company == other.Company &&
-                this.Email == other.Email &&
-                this.Phone == other.Phone &&
-                this.Address == other.Address;
-        }
-
-        public Customer Clone() => (Customer)MemberwiseClone(); 
+        public bool Equals(Customer other) =>
+            FirstName == other.FirstName &&
+            LastName == other.LastName &&
+            Company == other.Company &&
+            Email == other.Email &&
+            Phone == other.Phone &&
+            Address == other.Address;
     }
 }

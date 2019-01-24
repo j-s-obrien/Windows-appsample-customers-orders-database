@@ -26,8 +26,8 @@ using Contoso.Models;
 using Contoso.App.ViewModels;
 using System;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
-using Windows.ApplicationModel;
 using Windows.ApplicationModel.Email;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -43,40 +43,19 @@ namespace Contoso.App.Views
         /// <summary>
         /// Initializes the page.
         /// </summary>
-        public OrderDetailPage()
-        {
-            InitializeComponent();
-            Application.Current.Suspending += new SuspendingEventHandler(App_Suspending);
-        }
-
-        /// <summary>
-        /// Check for unsaved changes if the app shuts down.
-        /// </summary>
-        private void App_Suspending(object sender, SuspendingEventArgs e)
-        {
-
-            if (ViewModel.HasChanges)
-            {
-                // Save a temporary copy of the modified order so that the user has a chance to save it
-                // the next time the app is launched. 
-            }
-
-        }
+        public OrderDetailPage() => InitializeComponent();
 
         /// <summary>
         /// Stores the view model. 
         /// </summary>
-        private OrderDetailPageViewModel _viewModel;
+        private OrderViewModel _viewModel;
 
         /// <summary>
         /// We use this object to bind the UI to our data.
         /// </summary>
-        public OrderDetailPageViewModel ViewModel
+        public OrderViewModel ViewModel
         {
-            get
-            {
-                return _viewModel;
-            }
+            get => _viewModel;
             set
             {
                 if (_viewModel != value)
@@ -91,42 +70,32 @@ namespace Contoso.App.Views
         /// Loads the specified order, a cached order, or creates a new order.
         /// </summary>
         /// <param name="e">Info about the event.</param>
-        protected override void OnNavigatedTo(NavigationEventArgs e)
+        protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
-            // Determine whether a valid order was provided.
-            var order = e.Parameter as Order;
-            if (order != null)
+            var guid = (Guid)e.Parameter;
+            var customer = App.ViewModel.Customers.Where(cust => cust.Model.Id == guid).FirstOrDefault();
+
+            if (customer != null)
             {
-                ViewModel = new OrderDetailPageViewModel(order);
+                // Order is a new order
+                ViewModel = new OrderViewModel(new Order(customer.Model));
             }
             else
             {
-                // If order is null, check to see whether a customer was provided.
-                var customer = e.Parameter as Customer;
-                if (customer != null)
-                {
-                    // Create a new order for the specified customer. 
-                    ViewModel = new ViewModels.OrderDetailPageViewModel(new Order(customer));
-                }
-                // If no order or customer was provided,
-                // check to see if we have a cached order.
-                // If we don't, create a blank new order. 
-                else if (ViewModel == null)
-                {
-                    ViewModel = new OrderDetailPageViewModel(new Order()); 
-                }
+                // Order is an existing order.
+                var order = await App.Repository.Orders.GetAsync(guid);
+                ViewModel = new OrderViewModel(order);
             }
+
             base.OnNavigatedTo(e);
         }
-
 
         /// <summary>
         /// Check whether there are unsaved changes and warn the user.
         /// </summary>
         protected async override void OnNavigatingFrom(NavigatingCancelEventArgs e)
         {
-
-            if (ViewModel.HasChanges)
+            if (ViewModel.IsModified)
             {
                 var saveDialog = new SaveChangesDialog()
                 {
@@ -134,13 +103,14 @@ namespace Contoso.App.Views
                     Message = $"Invoice # {ViewModel.InvoiceNumber.ToString()} " + 
                         "has unsaved changes that will be lost. Do you want to save your changes?"
                 };
+
                 await saveDialog.ShowAsync();
                 SaveChangesDialogResult result = saveDialog.Result;
 
                 switch (result)
                 {
                     case SaveChangesDialogResult.Save:
-                        await ViewModel.SaveOrder();
+                        await ViewModel.SaveOrderAsync();
                         break;
                     case SaveChangesDialogResult.DontSave:
                         break;
@@ -154,11 +124,13 @@ namespace Contoso.App.Views
                             Frame.GoBack();
                         }
                         e.Cancel = true;
+
                         // This flag gets cleared on navigation, so restore it. 
-                        ViewModel.HasChanges = true; 
+                        ViewModel.IsModified = true; 
                         break;
                 }
             }
+
             base.OnNavigatingFrom(e);
         }
 
@@ -167,10 +139,12 @@ namespace Contoso.App.Views
         /// </summary>
         private async void emailButton_Click(object sender, RoutedEventArgs e)
         {
-            var emailMessage = new EmailMessage();
-            emailMessage.Body = $"Dear {ViewModel.CustomerName},";
-            emailMessage.Subject = $"A message from Contoso about order " + 
-                $"#{ViewModel.InvoiceNumber} placed on {ViewModel.DatePlaced.ToString("MM/dd/yyyy")} ";
+            var emailMessage = new EmailMessage
+            {
+                Body = $"Dear {ViewModel.CustomerName},",
+                Subject = "A message from Contoso about order " +
+                    $"#{ViewModel.InvoiceNumber} placed on {ViewModel.DatePlaced.ToString("MM/dd/yyyy")} "
+            };
 
             if (!string.IsNullOrEmpty(ViewModel.Customer.Email))
             {
@@ -179,7 +153,6 @@ namespace Contoso.App.Views
             }
 
             await EmailManager.ShowComposeNewEmailAsync(emailMessage);
-
         }
 
         /// <summary>
@@ -187,17 +160,13 @@ namespace Contoso.App.Views
         /// </summary>
         private void CommandBar_Loaded(object sender, RoutedEventArgs e)
         {
-            if (Windows.Foundation.Metadata.ApiInformation.IsPropertyPresent(
-                "Windows.UI.Xaml.Controls.CommandBar", "DefaultLabelPosition"))
+            if (Windows.System.Profile.AnalyticsInfo.VersionInfo.DeviceFamily == "Windows.Mobile")
             {
-                if (Windows.System.Profile.AnalyticsInfo.VersionInfo.DeviceFamily == "Windows.Mobile")
-                {
-                    (sender as CommandBar).DefaultLabelPosition = CommandBarDefaultLabelPosition.Bottom;
-                }
-                else
-                {
-                    (sender as CommandBar).DefaultLabelPosition = CommandBarDefaultLabelPosition.Right;
-                }
+                (sender as CommandBar).DefaultLabelPosition = CommandBarDefaultLabelPosition.Bottom;
+            }
+            else
+            {
+                (sender as CommandBar).DefaultLabelPosition = CommandBarDefaultLabelPosition.Right;
             }
         }
 
@@ -205,14 +174,13 @@ namespace Contoso.App.Views
         /// Reloads the order.
         /// </summary>
         private async void RefreshButton_Click(object sender, RoutedEventArgs e) => 
-            ViewModel = await OrderDetailPageViewModel.CreateFromGuid(ViewModel.Id);
+            ViewModel = await OrderViewModel.CreateFromGuid(ViewModel.Id);
 
         /// <summary>
         /// Reverts the page.
         /// </summary>
         private async void RevertButton_Click(object sender, RoutedEventArgs e)
         {
-
             var saveDialog = new SaveChangesDialog()
             {
                 Title = $"Save changes to Invoice # {ViewModel.InvoiceNumber.ToString()}?",
@@ -225,17 +193,16 @@ namespace Contoso.App.Views
             switch (result)
             {
                 case SaveChangesDialogResult.Save:
-                    await ViewModel.SaveOrder();
-                    ViewModel = await OrderDetailPageViewModel.CreateFromGuid(ViewModel.Id);
+                    await ViewModel.SaveOrderAsync();
+                    ViewModel = await OrderViewModel.CreateFromGuid(ViewModel.Id);
                     break;
                 case SaveChangesDialogResult.DontSave:
-                    ViewModel = await OrderDetailPageViewModel.CreateFromGuid(ViewModel.Id);
+                    ViewModel = await OrderViewModel.CreateFromGuid(ViewModel.Id);
                     break;
                 case SaveChangesDialogResult.Cancel:
                     break;
             }         
         }
-
 
         /// <summary>
         /// Saves the current order.
@@ -244,7 +211,7 @@ namespace Contoso.App.Views
         {
             try
             { 
-                await ViewModel.SaveOrder();
+                await ViewModel.SaveOrderAsync();
             }
             catch (OrderSavingException ex)
             {
@@ -289,7 +256,7 @@ namespace Contoso.App.Views
         /// </summary>
         private void AddProductButton_Click(object sender, RoutedEventArgs e)
         {
-            ViewModel.LineItems.Add(ViewModel.NewLineItem);
+            ViewModel.LineItems.Add(ViewModel.NewLineItem.Model);
             ClearCandidateProduct();
         }
 
@@ -306,18 +273,15 @@ namespace Contoso.App.Views
         /// </summary>
         private void ClearCandidateProduct()
         {
-            ProductSearchBox.Text = String.Empty;
-            ViewModel.NewLineItem = new LineItem();
+            ProductSearchBox.Text = string.Empty;
+            ViewModel.NewLineItem = new LineItemViewModel();
         }
 
         /// <summary>
         /// Removes a line item from the order.
         /// </summary>
-        private void RemoveProduct_Click(object sender, RoutedEventArgs e)
-        {
-            var lineItem = ((Button)sender).DataContext as LineItem;
-            ViewModel.LineItems.Remove(lineItem);
-        }
+        private void RemoveProduct_Click(object sender, RoutedEventArgs e) =>
+            ViewModel.LineItems.Remove((sender as FrameworkElement).DataContext as LineItem);
 
         /// <summary>
         /// Fired when a property value changes. 
@@ -327,9 +291,7 @@ namespace Contoso.App.Views
         /// <summary>
         /// Notifies listeners that a property value changed. 
         /// </summary>
-        private void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
+        private void OnPropertyChanged([CallerMemberName] string propertyName = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
     }
 }

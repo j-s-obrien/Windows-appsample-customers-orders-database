@@ -22,7 +22,6 @@
 //  THE SOFTWARE.
 //  ---------------------------------------------------------------------------------
 
-using Contoso.App.Commands;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -31,58 +30,41 @@ using Microsoft.Toolkit.Uwp.Helpers;
 namespace Contoso.App.ViewModels
 {
     /// <summary>
-    /// Encapsulates data for the CustomerListPage. The page UI
-    /// binds to the properties defined here. 
+    /// Provides data and commands accessible to the entire app.  
     /// </summary>
-    public class CustomerListPageViewModel : BindableBase
+    public class MainViewModel : BindableBase
     {
         /// <summary>
-        /// Creates a new CustomerListPageViewModel.
+        /// Creates a new MainViewModel.
         /// </summary>
-        public CustomerListPageViewModel()
-        {
-            Task.Run(GetCustomerListAsync);
-            SyncCommand = new RelayCommand(OnSync);
-        }
+        public MainViewModel() => Task.Run(GetCustomerListAsync);
 
-        private ObservableCollection<CustomerViewModel> _customers = new ObservableCollection<CustomerViewModel>(); 
         /// <summary>
         /// The collection of customers in the list. 
         /// </summary>
-        public ObservableCollection<CustomerViewModel> Customers
-        {
-            get => _customers;
-            set => SetProperty(ref _customers, value);
-        }
+        public ObservableCollection<CustomerViewModel> Customers { get; }
+            = new ObservableCollection<CustomerViewModel>();
 
         private CustomerViewModel _selectedCustomer;
+
         /// <summary>
         /// Gets or sets the selected customer, or null if no customer is selected. 
         /// </summary>
         public CustomerViewModel SelectedCustomer
         {
             get => _selectedCustomer;
-            set => SetProperty(ref _selectedCustomer, value);
-        }
-
-        private string _errorText = null;
-        /// <summary>
-        /// Gets or sets the error text.
-        /// </summary>
-        public string ErrorText
-        {
-            get => _errorText;
-            set => SetProperty(ref _errorText, value);
+            set => Set(ref _selectedCustomer, value);
         }
 
         private bool _isLoading = false;
+
         /// <summary>
-        /// Gets or sets whether to show the data loading progress wheel. 
+        /// Gets or sets a value indicating whether the Customers list is currently being updated. 
         /// </summary>
         public bool IsLoading
         {
             get => _isLoading; 
-            set => SetProperty(ref _isLoading, value);
+            set => Set(ref _isLoading, value);
         }
 
         /// <summary>
@@ -97,32 +79,32 @@ namespace Contoso.App.ViewModels
             {
                 return;
             }
+
             await DispatcherHelper.ExecuteOnUIThreadAsync(() =>
             {
                 Customers.Clear();
                 foreach (var c in customers)
                 {
-                    Customers.Add(new CustomerViewModel(c) { Validate = true });
+                    Customers.Add(new CustomerViewModel(c));
                 }
                 IsLoading = false;
             });
         }
 
-        public RelayCommand SyncCommand { get; private set; }
-
         /// <summary>
-        /// Queries the database for a current list of customers.
+        /// Saves any modified customers and reloads the customer list from the database.
         /// </summary>
-        private void OnSync()
+        public void Sync()
         {
             Task.Run(async () =>
             {
                 IsLoading = true;
                 foreach (var modifiedCustomer in Customers
-                    .Where(x => x.IsModified).Select(x => x.Model))
+                    .Where(customer => customer.IsModified).Select(customer => customer.Model))
                 {
                     await App.Repository.Customers.UpsertAsync(modifiedCustomer);
                 }
+
                 await GetCustomerListAsync();
                 IsLoading = false;
             });

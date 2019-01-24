@@ -1,18 +1,18 @@
 ﻿//  ---------------------------------------------------------------------------------
 //  Copyright (c) Microsoft Corporation.  All rights reserved.
-// 
+//
 //  The MIT License (MIT)
-// 
+//
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
 //  in the Software without restriction, including without limitation the rights
 //  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 //  copies of the Software, and to permit persons to whom the Software is
 //  furnished to do so, subject to the following conditions:
-// 
+//
 //  The above copyright notice and this permission notice shall be included in
 //  all copies or substantial portions of the Software.
-// 
+//
 //  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 //  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 //  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -22,28 +22,55 @@
 //  THE SOFTWARE.
 //  ---------------------------------------------------------------------------------
 
-using System;
+using Contoso.Models;
 
-namespace Contoso.App.Diagnostics.Models
-{ 
+namespace Contoso.App.ViewModels
+{
     /// <summary>
-    /// Contains diagnostic data about when a user navigates from a page.
+    /// Provides a bindable wrapper for the LineItem model class.
     /// </summary>
-    public class PageNavigatedFrom : Diagnostic
+    public class LineItemViewModel : BindableBase
     {
         /// <summary>
-        /// The name of the page.
+        /// Initializes a new instance of the LineItemWrapper class that wraps a LineItem object.
         /// </summary>
-        public string Name { get; set; }
+        public LineItemViewModel(LineItem model = null) => Model = model ?? new LineItem();
 
         /// <summary>
-        /// The total time the user spent on the page.
+        /// Gets the underlying LineItem object.
         /// </summary>
-        public TimeSpan TotalTime { get; set; }
+        public LineItem Model { get; }
 
         /// <summary>
-        /// The total time the user spent on the page while the app was in focus.
+        /// Gets or sets the product for the line item.
         /// </summary>
-        public TimeSpan FocusTime { get; set; }
+        public Product Product
+        {
+            get => Model.Product;
+            set
+            {
+                if (Model.Product != value)
+                {
+                    Model.Product = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the product quantity for the line item.
+        /// </summary>
+        public int Quantity
+        {
+            get => Model.Quantity;
+            set
+            {
+                if (Model.Quantity != value)
+                {
+                    Model.Quantity = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
     }
 }

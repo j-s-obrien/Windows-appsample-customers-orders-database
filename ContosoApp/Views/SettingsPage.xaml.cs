@@ -35,6 +35,9 @@ namespace Contoso.App.Views
     {
         public const string DataSourceKey = "data_source"; 
 
+        /// <summary>
+        /// Initializes a new instance of the SettingsPage class.
+        /// </summary>
         public SettingsPage()
         {
             InitializeComponent();
@@ -47,15 +50,6 @@ namespace Contoso.App.Views
             {
                 RestRadio.IsChecked = true; 
             }
-        }
-
-        /// <summary>
-        /// Gets or sets if app diagnostics are enabled.
-        /// </summary>
-        public bool IsDiagnosticsEnabled
-        {
-            get => App.Diagnostics.IsEnabled; 
-            set => App.Diagnostics.IsEnabled = value;
         }
 
         /// <summary>
@@ -72,7 +66,6 @@ namespace Contoso.App.Views
             }
             ApplicationData.Current.LocalSettings.Values[DataSourceKey] = radio.Tag; 
         }
-
 
         /// <summary>
         ///  Launches the privacy statement in the user's default browser.
